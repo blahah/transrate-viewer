@@ -4,11 +4,6 @@
     <!-- Latest compiled and minified bootstrap CSS -->
     <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
 
-    <!-- bootstrap theme -->
-    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap-theme.min.css">
-
-
-
     <!-- Latest compiled and minified D3 JavaScript -->
     <script type="text/javascript" src="http://mbostock.github.com/d3/d3.js"></script>
 
@@ -76,27 +71,24 @@ circle {
     </style>
 </head>
 <body>
-    <div id="container">
-      <div class="row">
-        <div class="col-md-6" id="left">
-          <div class="plot"></div>
-          <div class="legend"></div>
-        </div>
-        <div class="col-md-6" id="right">
-          <div class="plot"></div>
-          <div class="legend"></div>
-        </div>
-      </div>
+  <div class="container">
+    <div class="row">
+      <form class="form-inline" id="variable-selector" role="form">
+      </form>
     </div>
+    <div class="row">
+      <div class="plot" id="plot"></div>
+    </div>
+  </div>
 
 
-    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+  <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
 
-    <!-- Latest compiled and minified bootstrap JavaScript -->
-    <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+  <!-- Latest compiled and minified bootstrap JavaScript -->
+  <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
 
-    <!-- Transrate viewer -->
-    <script type="text/javascript" src="viewer.js"></script>
+  <!-- Transrate viewer -->
+  <script type="text/javascript" src="viewer.js"></script>
 </body>
 </html>

@@ -33,7 +33,7 @@ d3.csv('/test.csv', function(data) {
       .on("brushend", brushend);
 
   // Root panel.
-  var svg = d3.select("body").append("svg:svg")
+  var svg = d3.select("#plot").append("svg:svg")
       .attr("width", 1800)
       .attr("height", 1400)
     .append("svg:g")
@@ -103,13 +103,15 @@ d3.csv('/test.csv', function(data) {
         .attr("height", size - padding);
 
     // Plot dots.
-    cell.selectAll("circle")
-        .data(data)
-      .enter().append("svg:circle")
+    var dots = cell.selectAll("circle")
+    dots.data(data)
+        .enter().append("svg:circle")
         .attr("class", function(d) { return d.has_crb; })
         .attr("cx", function(d) { return x[p.x](d[p.x]); })
         .attr("cy", function(d) { return y[p.y](d[p.y]); })
         .attr("r", 1);
+    dots.data(data).exit().remove();
+
 
     // Plot brush.
     cell.call(brush.x(x[p.x]).y(y[p.y]));
