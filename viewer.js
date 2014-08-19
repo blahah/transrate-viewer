@@ -1,15 +1,138 @@
-d3.csv('/test.csv', function(data) {
+var data = null
+  , size = 140
+  , padding = 10
+  , metrics = []
+  , defaultMetrics = ['length', 'orf_length', 'linguistic_complexity_6']
+  , n = metrics.length
+  , axis = null
+  , brush = null
+  , svg = null
+  , x = {}
+  , xs = {}
+  , y = {}
+  , data = [];
 
-  // Size parameters.
-  var size = 140,
-      padding = 10,
-      n = 8,
-      metrics = ["length", "prop_gc", "gc_skew", "orf_length",
-                 "uncovered_bases", "mean_coverage", "in_bridges",
-                 "edit_distance_per_base"];
+var setVariables = function() {
+  var allMetrics = Object.keys(data[0]);
+  var form = d3.select("#var-selector").selectAll("div")
+    .data(allMetrics)
+    .enter()
+    .append("tr")
+      .attr("class", "cb");
+  var cbs = d3.selectAll(".cb");
+  cbs.append("td")
+    .append("input")
+      .attr("type", "checkbox")
+      .attr("id", function(d) { return d; })
+      .attr("class", "metric-checkbox")
+      .attr("checked", function(d) {
+        return (defaultMetrics.indexOf(d) >= 0) ? "true" : null;
+      })
+      .attr("onChange", "updateAll();")
+      .attr("value", "");
+  cbs.append("td")
+    .text(function(d) { return ' ' + d.replace(/_/g, " "); });
+  updateMetrics();
+}
 
+function drawPanels() {
+  // Axes.
+  axis = d3.svg.axis()
+    .ticks(5)
+    .tickSize(size * n);
+
+  // Brush.
+  brush = d3.svg.brush()
+    .on("brushstart", brushstart)
+    .on("brush", brush)
+    .on("brushend", brushend);
+
+  // Root panel.
+  svg = d3.select("#plot").append("svg:svg")
+      .attr("width", 1800)
+      .attr("height", 1400)
+    .append("svg:g")
+      .attr("transform", "translate(20, 20)");
+}
+
+// Clear the previously-active brush, if any.
+function brushstart(p) {
+  if (brush.data !== p) {
+    cell.call(brush.clear());
+    brush.x(x[p.x]).y(y[p.y]).data = p;
+  }
+}
+
+// Highlight the selected circles.
+function brush(p) {
+  var e = brush.extent();
+  svg.selectAll(".cell circle").attr("class", function(d) {
+    return e[0][0] <= d[p.x] && d[p.x] <= e[1][0]
+        && e[0][1] <= d[p.y] && d[p.y] <= e[1][1]
+        ? d.has_crb : null;
+  });
+}
+
+// If the brush is empty, select all circles.
+function brushend() {
+  if (brush.empty()) {
+    svg.selectAll(".cell circle").attr("class", function(d) {
+      return d.has_crb;
+    });
+  }
+}
+
+function cross(a, b) {
+  var c = [], n = a.length, m = b.length, i, j;
+  for (i = -1; ++i < n;) for (j = -1; ++j < m;) {
+    c.push({x: a[i], i: i, y: b[j], j: j});
+  }
+  return c;
+}
+
+function crossIdentity(d) {
+  return d.x + ":" + d.y;
+}
+
+var drawLegend = function() {
+  // Legend.
+  var legendDict = {
+    true: "CRBB hit",
+    false: "no CRBB hit"
+  };
+
+  var legend = d3.select("#legend-table")
+    .selectAll("tr")
+    .data(["true", "false"])
+    .enter().append("tr");
+
+  legend.append("td")
+    .append("svg:svg")
+      .attr("width", 20)
+      .attr("height", 20)
+    .append("svg:g")
+      .attr("transform", "translate(10, 10)")
+      .attr("class", "legend")
+    .append("svg:circle")
+      .attr("class", function(d) { return d; })
+      .attr("r", 6);
+
+  legend.append("td")
+    .text(function(d) { return legendDict[d]; });
+}
+
+function updateMetrics() {
+  metrics = [];
+  d3.selectAll('.metric-checkbox')
+    .filter(':checked')
+    .each(function() {
+      metrics.push(d3.select(this).attr('id'));
+    });
+  n = metrics.length;
+}
+
+function updateScales() {
   // Position scales.
-  var x = {}, y = {};
   metrics.forEach(function(metric) {
     // Coerce values to numbers.
     data.forEach(function(d) { d[metric] = +d[metric]; });
@@ -18,134 +141,158 @@ d3.csv('/test.csv', function(data) {
         domain = [d3.min(data, value), d3.max(data, value)],
         range = [padding / 2, size - padding / 2];
     x[metric] = d3.scale.linear().domain(domain).range(range);
-    y[metric] = d3.scale.linear().domain(domain).range(range.reverse());
+    xs[metric] = d3.scale.linear().domain(domain).range(range.reverse());
+    y[metric] = d3.scale.linear().domain(domain.reverse()).range(range.reverse());
   });
+}
 
-  // Axes.
-  var axis = d3.svg.axis()
-      .ticks(5)
-      .tickSize(size * n);
+function updatePlots() {
 
-  // Brush.
-  var brush = d3.svg.brush()
-      .on("brushstart", brushstart)
-      .on("brush", brush)
-      .on("brushend", brushend);
-
-  // Root panel.
-  var svg = d3.select("#plot").append("svg:svg")
-      .attr("width", 1800)
-      .attr("height", 1400)
-    .append("svg:g")
-      .attr("transform", "translate(130, 20)");
-
-  var legendDict = {
-    true: "CRBB hit",
-    false: "no CRBB hit"
-  };
-
-  // Legend.
-  var legend = svg.selectAll("g.legend")
-      .data(["true", "false"])
-    .enter().append("svg:g")
-      .attr("class", "legend")
-      .attr("transform", function(d, i) { return "translate(-110," + (i * 20 + 594) + ")"; });
-
-  legend.append("svg:circle")
-      .attr("class", String)
-      .attr("r", 6);
-
-  legend.append("svg:text")
-      .attr("x", 12)
-      .attr("dy", ".31em")
-      .text(function(d) { return legendDict[d]; });
+  axis.tickSize(size * n);
 
   // X-axis.
-  svg.selectAll("g.x.axis")
-      .data(metrics)
-    .enter().append("svg:g")
-      .attr("class", "x axis")
-      .attr("transform", function(d, i) { return "translate(" + i * size + ",0)"; })
-      .each(function(d) { d3.select(this).call(axis.scale(x[d]).orient("bottom")); });
+  var xaxis = svg.selectAll("g.x.axis")
+    .data(metrics, function(d) { return d; });
+  // move existing
+  xaxis.attr("transform", function(d, i) {
+      return "translate(" + i * size + "," + 0 * size + ")";
+    })
+    .each(function(d) {
+      d3.select(this).call(axis.scale(xs[d]).orient("bottom"));
+    })
+    .selectAll('text')
+    .each(function() {
+      var t = d3.select(this);
+      t.attr("transform", "rotate(-90, 0, " + size * n + ")");
+    })
+    .attr("dy", "-0em");
+
+  // add new
+  xaxis.enter().append("svg:g")
+    .attr("class", "x axis")
+    .attr("transform", function(d, i) {
+      return "translate(" + i * size + "," + 0 * size + ")";
+    })
+    .each(function(d) {
+      d3.select(this).call(axis.scale(xs[d]).orient("bottom"));
+    })
+    .selectAll('text')
+    .each(function(d, i) {
+      var t = d3.select(this);
+      t.attr("transform", "rotate(-90, 0, " + (size*n) + ")");
+    })
+    .attr("dy", "-0em")
+    .style("text-anchor", "end");
+
+  // remove old
+  xaxis.exit().remove();
 
   // Y-axis.
-  svg.selectAll("g.y.axis")
-      .data(metrics)
-    .enter().append("svg:g")
-      .attr("class", "y axis")
-      .attr("transform", function(d, i) { return "translate(0," + i * size + ")"; })
-      .each(function(d) { d3.select(this).call(axis.scale(y[d]).orient("right")); });
+  var yaxis = svg.selectAll("g.y.axis")
+    .data(metrics, function(d) { return d; });
+  // move existing
+  yaxis.attr("transform", function(d, i) {
+      return "translate(0," + i * size + ")";
+    })
+    .each(function(d) {
+      d3.select(this).call(axis.scale(y[d]).orient("right"));
+    });
+  // add new
+  yaxis.enter().append("svg:g")
+    .attr("class", "y axis")
+    .attr("transform", function(d, i) {
+      return "translate(0," + i * size + ")";
+    })
+    .each(function(d) {
+      d3.select(this).call(axis.scale(y[d]).orient("right"));
+    });
+  // remove old
+  yaxis.exit().remove();
 
   // Cell and plot.
   var cell = svg.selectAll("g.cell")
-      .data(cross(metrics, metrics))
-    .enter().append("svg:g")
-      .attr("class", "cell")
-      .attr("transform", function(d) { return "translate(" + d.i * size + "," + d.j * size + ")"; })
-      .each(plot);
+    .data(cross(metrics, metrics), crossIdentity);
 
-  // Titles for the diagonal.
-  cell.filter(function(d) { return d.i == d.j; }).append("svg:text")
+  // move existing plots to their new grid position
+  cell.transition()
+    .attr("transform", function(d) {
+      return "translate(" + d.i * size + "," + d.j * size + ")";
+    });
+
+  // update text labels
+  cell.selectAll("svg text.diag-label")
+    .transition()
+    .text(function(d) {
+      return (d.i == d.j) ? d.x.replace(/_/g, ' ') : ''; }
+    );
+
+  // create new cells
+  var cellEnter = cell.enter();
+
+  cellEnter.append("svg:g")
+    .attr("class", "cell")
+    .attr("transform", function(d) {
+      return "translate(" + d.i * size + "," + d.j * size + ")";
+    })
+    .each(plot)
+    .append("svg:text")
+      .attr("class", "diag-label")
       .attr("x", padding)
       .attr("y", padding)
       .attr("dy", ".71em")
-      .text(function(d) { return d.x; });
+      .text(function(d) {
+        return (d.i == d.j) ? d.x.replace(/_/g, ' ')  : '';
+      });
+
+  // remove old ones
+  cell.exit().remove();
 
   function plot(p) {
     var cell = d3.select(this);
 
     // Plot frame.
     cell.append("svg:rect")
-        .attr("class", "frame")
-        .attr("x", padding / 2)
-        .attr("y", padding / 2)
-        .attr("width", size - padding)
-        .attr("height", size - padding);
+      .attr("class", "frame")
+      .attr("x", padding / 2)
+      .attr("y", padding / 2)
+      .attr("width", size - padding)
+      .attr("height", size - padding);
 
     // Plot dots.
     var dots = cell.selectAll("circle")
     dots.data(data)
-        .enter().append("svg:circle")
-        .attr("class", function(d) { return d.has_crb; })
-        .attr("cx", function(d) { return x[p.x](d[p.x]); })
-        .attr("cy", function(d) { return y[p.y](d[p.y]); })
-        .attr("r", 1);
+      .enter().append("svg:circle")
+      .attr("class", function(d) { return d.has_crb; })
+      .transition().delay(function(d, i) { return i * 5; }).duration(600  )
+      .attr("cx", function(d) { return x[p.x](d[p.x]); })
+      .attr("cy", function(d) { return y[p.y](d[p.y]); })
+      .attr("r", 2);
     dots.data(data).exit().remove();
-
 
     // Plot brush.
     cell.call(brush.x(x[p.x]).y(y[p.y]));
   }
+}
 
-  // Clear the previously-active brush, if any.
-  function brushstart(p) {
-    if (brush.data !== p) {
-      cell.call(brush.clear());
-      brush.x(x[p.x]).y(y[p.y]).data = p;
-    }
-  }
+function loadCsv(csvfile) {
+  d3.csv(csvfile, function(csvData) {
+    data = csvData;
+    drawPlot();
+  });
+}
 
-  // Highlight the selected circles.
-  function brush(p) {
-    var e = brush.extent();
-    svg.selectAll(".cell circle").attr("class", function(d) {
-      return e[0][0] <= d[p.x] && d[p.x] <= e[1][0]
-          && e[0][1] <= d[p.y] && d[p.y] <= e[1][1]
-          ? d.has_crb : null;
-    });
-  }
+var drawPlot = function() {
+  setVariables();
+  drawLegend();
+  updateScales();
+  drawPanels();
+  updatePlots();
+}
 
-  // If the brush is empty, select all circles.
-  function brushend() {
-    if (brush.empty()) svg.selectAll(".cell circle").attr("class", function(d) {
-      return d.has_crb;
-    });
-  }
+function updateAll() {
+  updateMetrics();
+  updateScales();
+  updatePlots();
+}
 
-  function cross(a, b) {
-    var c = [], n = a.length, m = b.length, i, j;
-    for (i = -1; ++i < n;) for (j = -1; ++j < m;) c.push({x: a[i], i: i, y: b[j], j: j});
-    return c;
-  }
-
-});
+loadCsv('/test.csv');
