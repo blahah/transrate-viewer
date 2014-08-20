@@ -10,7 +10,8 @@ var data = null
   , x = {}
   , xs = {}
   , y = {}
-  , data = [];
+  , data = []
+  , cell = null;
 
 var setVariables = function() {
   var allMetrics = Object.keys(data[0]);
@@ -41,45 +42,12 @@ function drawPanels() {
     .ticks(5)
     .tickSize(size * n);
 
-  // Brush.
-  brush = d3.svg.brush()
-    .on("brushstart", brushstart)
-    .on("brush", brush)
-    .on("brushend", brushend);
-
   // Root panel.
   svg = d3.select("#plot").append("svg:svg")
       .attr("width", 1800)
       .attr("height", 1400)
     .append("svg:g")
       .attr("transform", "translate(20, 20)");
-}
-
-// Clear the previously-active brush, if any.
-function brushstart(p) {
-  if (brush.data !== p) {
-    cell.call(brush.clear());
-    brush.x(x[p.x]).y(y[p.y]).data = p;
-  }
-}
-
-// Highlight the selected circles.
-function brush(p) {
-  var e = brush.extent();
-  svg.selectAll(".cell circle").attr("class", function(d) {
-    return e[0][0] <= d[p.x] && d[p.x] <= e[1][0]
-        && e[0][1] <= d[p.y] && d[p.y] <= e[1][1]
-        ? d.has_crb : null;
-  });
-}
-
-// If the brush is empty, select all circles.
-function brushend() {
-  if (brush.empty()) {
-    svg.selectAll(".cell circle").attr("class", function(d) {
-      return d.has_crb;
-    });
-  }
 }
 
 function cross(a, b) {
@@ -147,6 +115,12 @@ function updateScales() {
 }
 
 function updatePlots() {
+
+  // Brush.
+  brush = d3.svg.brush()
+    .on("brushstart", brushstart)
+    .on("brush", brush)
+    .on("brushend", brushend);
 
   axis.tickSize(size * n);
 
@@ -272,6 +246,34 @@ function updatePlots() {
     // Plot brush.
     cell.call(brush.x(x[p.x]).y(y[p.y]));
   }
+
+  // Clear the previously-active brush, if any.
+  function brushstart(p) {
+    if (brush.data !== p) {
+      cell.call(brush.clear());
+      brush.x(x[p.x]).y(y[p.y]).data = p;
+    }
+  }
+
+  // Highlight the selected circles.
+  function brush(p) {
+    var e = brush.extent();
+    svg.selectAll(".cell circle").attr("class", function(d) {
+      return e[0][0] <= d[p.x] && d[p.x] <= e[1][0]
+          && e[0][1] <= d[p.y] && d[p.y] <= e[1][1]
+          ? d.has_crb : null;
+    });
+  }
+
+  // If the brush is empty, select all circles.
+  function brushend() {
+    if (brush.empty()) {
+      svg.selectAll(".cell circle").attr("class", function(d) {
+        return d.has_crb;
+      });
+    }
+  }
+
 }
 
 function loadCsv(csvfile) {
